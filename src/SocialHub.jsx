@@ -284,9 +284,22 @@ export default function SocialHub({ session }) {
   function saveApiKey() { localStorage.setItem("sh_apikey", apiKey); setApiKeySaved(true); setTimeout(() => setApiKeySaved(false), 2000); }
   function checkKey() { if (!apiKey) { alert("Configure sua API Key em Configurações."); setView(VIEWS.SETTINGS); return false; } return true; }
 
-  async function callAI(prompt) {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" }, body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4000, messages: [{ role: "user", content: prompt }] }) });
-    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || "API Error"); }
+  async function callAI(prompt, useWebSearch = false) {
+    const body = {
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 5000,
+      messages: [{ role: "user", content: prompt }]
+    };
+    if (useWebSearch) {
+      body.tools = [{ type: "web_search_20250305", name: "web_search" }];
+      body.max_tokens = 8000;
+    }
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+      body: JSON.stringify(body)
+    });
+    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || "API Error " + resp.status); }
     const data = await resp.json();
     return (data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "").replace(/```json|```/g, "").trim();
   }
@@ -336,10 +349,17 @@ RESPONDA APENAS JSON: {"items":[{"day":1,"time":"12:00","type":"post","title":"t
     if (!checkKey()) return;
     setAiL(true); setTrendR(null);
     const q = trendQ || ac?.industry || "marketing digital";
-    const p = `Especialista em marketing viral. Analise tendências no nicho: "${q}". ${ac ? `Cliente: ${ac.name}` : ""}
-5 tendências com: name, platform, why_viral, script, hook, editing_tips, hashtags, best_time, estimated_reach.
-JSON apenas: {"trends":[{"name":"","platform":"","why_viral":"","script":"","hook":"","editing_tips":"","hashtags":"","best_time":"","estimated_reach":"alto|médio"}]}`;
-    try { const text = await callAI(p); setTrendR(JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text)); } catch(e) { setTrendR({ error: e.message }); }
+    const p = `Você é um especialista em marketing viral e social media. 
+Pesquise na internet O QUE ESTÁ VIRALIZANDO AGORA em ${new Date().toLocaleDateString("pt-BR", {month:"long",year:"numeric"})} no nicho: "${q}". ${ac ? `Cliente: ${ac.name} | Segmento: ${ac.industry}` : ""}
+
+IMPORTANTE: Use a ferramenta de busca para encontrar tendências REAIS e ATUAIS do Instagram, TikTok e Reels brasileiros.
+Busque por: tendências ${q} instagram 2026, reels virais ${q}, conteúdo viral ${q} brasil.
+
+Após pesquisar, retorne EXATAMENTE este JSON com 5 tendências reais encontradas:
+{"trends":[{"name":"nome da tendência","platform":"Instagram|TikTok|Ambos","why_viral":"por que está viralizando com dados reais","script":"roteiro completo passo a passo","hook":"gancho dos primeiros 3 segundos","editing_tips":"dicas de gravação e edição","hashtags":"#hashtags relevantes","best_time":"melhor horário para postar","estimated_reach":"alto|médio"}]}
+
+Responda APENAS com o JSON, sem texto antes ou depois.`;
+    try { const text = await callAI(p, true); setTrendR(JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text)); } catch(e) { setTrendR({ error: e.message }); }
     setAiL(false);
   }
 
