@@ -224,13 +224,32 @@ const defClient = { name:"",industry:"",instagram:"",persona:"",tone:"",colors:"
 const defTask = { title:"",type:"post",day:1,time:"12:00",description:"",hashtags:"",status:"draft",approval_note:"" };
 
 // ─── MAIN APP ─────────────────────────────────────────────────────
-function TaskForm({ task, setT, onSave, onCancel, title, onDel, tOpts, sOpts, dim }) {
+function TaskForm({ task, setT, onSave, onCancel, title, onDel, tOpts, sOpts, dim, calM, calY }) {
+  // Build date string from task.day + calM + calY for the date input
+  const pad = n => String(n).padStart(2, "0");
+  const dateVal = task.day ? `${calY}-${pad(calM + 1)}-${pad(task.day)}` : "";
+
+  function handleDateChange(v) {
+    if (!v) return;
+    const [y, m, d] = v.split("-").map(Number);
+    setT({ ...task, day: d, month: m - 1, year: y });
+  }
+
+  const inputS = { width:"100%", padding:"10px 14px", borderRadius:T.radiusSm, border:`1px solid ${T.border}`, background:T.bgInput, backdropFilter:"blur(10px)", color:T.text, fontSize:13, fontFamily:T.font, boxSizing:"border-box", outline:"none", transition:"border 0.2s" };
+  const labelS = { fontSize:11, color:T.textMuted, display:"block", marginBottom:5, fontWeight:600, letterSpacing:"0.06em", textTransform:"uppercase" };
+
   return (
     <Modal title={title} onClose={onCancel} wide>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 20px" }}>
         <Field label="Título" value={task.title} onChange={v => setT({ ...task, title: v })} placeholder="Ex: Post sobre tendências" />
         <Field label="Tipo" value={task.type} onChange={v => setT({ ...task, type: v })} options={tOpts} />
-        <Field label="Dia" type="number" value={task.day} onChange={v => setT({ ...task, day: Math.min(Math.max(parseInt(v)||1,1), dim) })} />
+
+        {/* Data picker */}
+        <div style={{ marginBottom: 14 }}>
+          <label style={labelS}>Data</label>
+          <input type="date" value={dateVal} onChange={e => handleDateChange(e.target.value)} style={inputS} />
+        </div>
+
         <Field label="Horário" type="time" value={task.time} onChange={v => setT({ ...task, time: v })} />
         <Field label="Status" value={task.status} onChange={v => setT({ ...task, status: v })} options={sOpts} />
         <Field label="Hashtags" value={task.hashtags || ""} onChange={v => setT({ ...task, hashtags: v })} placeholder="#marketing #digital" />
@@ -912,8 +931,8 @@ Responda APENAS com o JSON, sem texto antes ou depois.`;
       </div>
 
       {/* ── MODALS ── */}
-      {showNew && <TaskForm title="Novo item" task={nTask} setT={setNTask} tOpts={tOpts} sOpts={sOpts} dim={dim} onCancel={() => setShowNew(false)} onSave={async () => { if (nTask.title) { await addTask(nTask); setShowNew(false); } }} />}
-      {taskModal && eTask && <TaskForm title="Editar item" task={eTask} setT={setETask} tOpts={tOpts} sOpts={sOpts} dim={dim} onCancel={() => { setTaskModal(null); setETask(null); }} onSave={async () => { await updTask(taskModal, eTask); setTaskModal(null); setETask(null); }} onDel={() => { if (confirm("Excluir?")) delTask(taskModal); }} />}
+      {showNew && <TaskForm title="Novo item" task={nTask} setT={setNTask} tOpts={tOpts} sOpts={sOpts} dim={dim} calM={calM} calY={calY} onCancel={() => setShowNew(false)} onSave={async () => { if (nTask.title) { await addTask(nTask); setShowNew(false); } }} />}
+      {taskModal && eTask && <TaskForm title="Editar item" task={eTask} setT={setETask} tOpts={tOpts} sOpts={sOpts} dim={dim} calM={calM} calY={calY} onCancel={() => { setTaskModal(null); setETask(null); }} onSave={async () => { await updTask(taskModal, eTask); setTaskModal(null); setETask(null); }} onDel={() => { if (confirm("Excluir?")) delTask(taskModal); }} />}
     </div>
   );
 }
