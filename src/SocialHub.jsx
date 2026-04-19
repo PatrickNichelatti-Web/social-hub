@@ -246,6 +246,8 @@ export default function SocialHub({ session }) {
   const [sbOpen, setSbOpen] = useState(true);
   const [profile, setProfile] = useState(null);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("sh_apikey") || "");
+  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem("sh_geminikey") || "");
+  const [aiProvider, setAiProvider] = useState(() => localStorage.getItem("sh_provider") || "claude");
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [trendQ, setTrendQ] = useState("");
   const [trendR, setTrendR] = useState(null);
@@ -281,27 +283,57 @@ export default function SocialHub({ session }) {
     load();
   }, []);
 
-  function saveApiKey() { localStorage.setItem("sh_apikey", apiKey); setApiKeySaved(true); setTimeout(() => setApiKeySaved(false), 2000); }
-  function checkKey() { if (!apiKey) { alert("Configure sua API Key em Configurações."); setView(VIEWS.SETTINGS); return false; } return true; }
+  function saveApiKey() {
+    localStorage.setItem("sh_apikey", apiKey);
+    localStorage.setItem("sh_geminikey", geminiKey);
+    localStorage.setItem("sh_provider", aiProvider);
+    setApiKeySaved(true);
+    setTimeout(() => setApiKeySaved(false), 2000);
+  }
+  function checkKey() {
+    if (aiProvider === "claude" && !apiKey) { alert("Configure sua API Key da Anthropic em ⚙️ Configurações."); setView(VIEWS.SETTINGS); return false; }
+    if (aiProvider === "gemini" && !geminiKey) { alert("Configure sua API Key do Gemini em ⚙️ Configurações."); setView(VIEWS.SETTINGS); return false; }
+    return true;
+  }
 
   async function callAI(prompt, useWebSearch = false) {
-    const body = {
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 5000,
-      messages: [{ role: "user", content: prompt }]
-    };
-    if (useWebSearch) {
-      body.tools = [{ type: "web_search_20250305", name: "web_search" }];
-      body.max_tokens = 8000;
+    if (aiProvider === "gemini") {
+      // Gemini API (gratuito)
+      const model = useWebSearch ? "gemini-2.0-flash" : "gemini-2.0-flash";
+      const tools = useWebSearch ? [{ googleSearch: {} }] : undefined;
+      const body = {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 8192, temperature: 0.7 }
+      };
+      if (tools) body.tools = tools;
+      const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || "Gemini API Error " + resp.status); }
+      const data = await resp.json();
+      return (data.candidates?.[0]?.content?.parts?.map(p => p.text).join("") || "").replace(/```json|```/g, "").trim();
+    } else {
+      // Claude API (Anthropic)
+      const body = {
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 5000,
+        messages: [{ role: "user", content: prompt }]
+      };
+      if (useWebSearch) {
+        body.tools = [{ type: "web_search_20250305", name: "web_search" }];
+        body.max_tokens = 8000;
+      }
+      const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify(body)
+      });
+      if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || "Claude API Error " + resp.status); }
+      const data = await resp.json();
+      return (data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "").replace(/```json|```/g, "").trim();
     }
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" },
-      body: JSON.stringify(body)
-    });
-    if (!resp.ok) { const e = await resp.json(); throw new Error(e.error?.message || "API Error " + resp.status); }
-    const data = await resp.json();
-    return (data.content?.filter(b => b.type === "text").map(b => b.text).join("") || "").replace(/```json|```/g, "").trim();
   }
 
   const ac = clients.find(c => c.id === sel);
@@ -543,18 +575,40 @@ Responda APENAS com o JSON, sem texto antes ou depois.`;
     </Card>
 
     <Card style={{ padding: 24 }}>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 4 }}>API Key da Anthropic</div>
-        <div style={{ fontSize: 12, color: T.textSub }}>Necessária para usar os recursos de IA. Fica salva apenas no seu navegador.</div>
+      <div style={{ fontWeight: 700, fontSize: 15, color: T.text, marginBottom: 16 }}>🤖 Provedor de IA</div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
+        <div onClick={()=>setAiProvider("claude")} style={{ flex:1, padding:"12px 16px", borderRadius: T.radiusSm, border:`2px solid ${aiProvider==="claude"?T.accentGreen:T.border}`, background: aiProvider==="claude"?T.accentGreenLight:"transparent", cursor:"pointer", textAlign:"center" }}>
+          <div style={{ fontWeight:700, fontSize:14, color: aiProvider==="claude"?T.accentGreen:T.text }}>Claude (Anthropic)</div>
+          <div style={{ fontSize:11, color: T.textMuted, marginTop:3 }}>Melhor qualidade · Pago</div>
+        </div>
+        <div onClick={()=>setAiProvider("gemini")} style={{ flex:1, padding:"12px 16px", borderRadius: T.radiusSm, border:`2px solid ${aiProvider==="gemini"?"#4285F4":T.border}`, background: aiProvider==="gemini"?"rgba(66,133,244,0.08)":"transparent", cursor:"pointer", textAlign:"center" }}>
+          <div style={{ fontWeight:700, fontSize:14, color: aiProvider==="gemini"?"#4285F4":T.text }}>Gemini (Google)</div>
+          <div style={{ fontSize:11, color: T.textMuted, marginTop:3 }}>Gratuito · Ótimo para testes</div>
+        </div>
       </div>
-      <Field type="password" value={apiKey} onChange={setApiKey} placeholder="sk-ant-api03-..." />
+
+      {aiProvider==="claude" && (<>
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: T.text, marginBottom: 4 }}>API Key da Anthropic</div>
+          <div style={{ fontSize: 12, color: T.textSub, marginBottom: 10 }}>Obtenha em <strong>console.anthropic.com</strong> → API Keys</div>
+        </div>
+        <Field type="password" value={apiKey} onChange={setApiKey} placeholder="sk-ant-api03-..." />
+      </>)}
+
+      {aiProvider==="gemini" && (<>
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: T.text, marginBottom: 4 }}>API Key do Gemini</div>
+          <div style={{ fontSize: 12, color: T.textSub, marginBottom: 10 }}>Grátis em <strong>aistudio.google.com</strong> → Get API Key</div>
+        </div>
+        <Field type="password" value={geminiKey} onChange={setGeminiKey} placeholder="AIza..." />
+        <div style={{ padding:"10px 14px", borderRadius: T.radiusSm, background:"rgba(66,133,244,0.06)", border:"1px solid rgba(66,133,244,0.15)", fontSize:12, color:"#4285F4", marginBottom:14 }}>
+          ✓ Gemini Flash 2.0 é gratuito — 15 req/min e 1M tokens/dia sem custo
+        </div>
+      </>)}
+
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <Btn variant="primary" size="sm" onClick={saveApiKey}>Salvar chave</Btn>
-        {apiKeySaved && <span style={{ fontSize: 12, color: T.accentGreen, fontWeight: 600 }}>✓ Salva com sucesso!</span>}
-        {apiKey && !apiKeySaved && <span style={{ fontSize: 12, color: T.textSub }}>✓ Chave configurada</span>}
-      </div>
-      <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: T.radiusSm, background: "rgba(0,0,0,0.03)", fontSize: 12, color: T.textMuted }}>
-        Acesse <strong>console.anthropic.com</strong> → API Keys para obter sua chave.
+        <Btn variant="primary" size="sm" onClick={saveApiKey}>Salvar configurações</Btn>
+        {apiKeySaved && <span style={{ fontSize: 12, color: T.accentGreen, fontWeight: 600 }}>✓ Salvo!</span>}
       </div>
     </Card>
 
