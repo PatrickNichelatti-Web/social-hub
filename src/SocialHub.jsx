@@ -267,6 +267,244 @@ function TaskForm({ task, setT, onSave, onCancel, title, onDel, tOpts, sOpts, di
   );
 }
 
+function ReviewModal({ items, selIdx, setSelIdx, activeTab, setActiveTab, onRemove, onUpdate, onApprove, onRegenerate, onClose, origin, T }) {
+  if (!items || items.length === 0) {
+    return (
+      <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,15,15,0.4)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.2s ease" }} onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(30px)", borderRadius: 24, padding: 40, width: 420, boxShadow: "0 32px 80px rgba(0,0,0,0.16)", textAlign: "center" }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🗑️</div>
+          <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, color: T.text }}>Todos os itens removidos</div>
+          <div style={{ fontSize: 13, color: T.textSub, marginBottom: 20 }}>Você removeu todos os itens da revisão.</div>
+          <button onClick={onClose} style={{ padding: "10px 20px", borderRadius: 100, background: T.accent, color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Fechar</button>
+        </div>
+      </div>
+    );
+  }
+
+  const sel = Math.min(selIdx, items.length - 1);
+  const d = items[sel] || {};
+  const isTrend = d._isTrend;
+  const typeColors = { reel: { bg: "#EEEDFE", txt: "#3C3489" }, post: { bg: "#E6F1FB", txt: "#0C447C" }, carousel: { bg: "#EAF3DE", txt: "#27500A" }, carrossel: { bg: "#EAF3DE", txt: "#27500A" }, story: { bg: "#FAEEDA", txt: "#633806" } };
+  const tc = typeColors[d.type] || typeColors.post;
+  const typeIcons = { reel: "▶", post: "◻", carousel: "◫", carrossel: "◫", story: "○" };
+
+  const tabs = isTrend
+    ? [{ key: 0, label: "Prévia" }, { key: 1, label: "Roteiro" }, { key: 2, label: "Legenda" }, { key: 3, label: "Hook & Música" }, { key: 4, label: "Edição" }, { key: 5, label: "Nota" }]
+    : [{ key: 0, label: "Prévia" }, { key: 1, label: "Roteiro" }, { key: 2, label: "Legenda" }, { key: 3, label: "Design" }, { key: 4, label: "Nota" }];
+
+  function renderPreview() {
+    const previewFrame = (bg, content) => (
+      <div style={{ display: "flex", justifyContent: "center", padding: "20px 0" }}>
+        <div style={{ width: 180, height: 320, border: `3px solid ${T.border}`, borderRadius: 22, overflow: "hidden", background: "#000", display: "flex", flexDirection: "column" }}>
+          {content}
+        </div>
+      </div>
+    );
+
+    if (d.type === "reel" || (isTrend && (d.type === "reel" || !d.type))) {
+      return previewFrame(null, (
+        <>
+          <div style={{ flex: 1, background: "linear-gradient(135deg,#1a0533,#3d1452)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 12, position: "relative" }}>
+            <div style={{ position: "absolute", top: 10, left: 10, fontSize: 9, color: "#fff", background: "rgba(0,0,0,0.4)", padding: "3px 7px", borderRadius: 99, fontWeight: 600 }}>Reel</div>
+            <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 18, marginBottom: 10 }}>▶</div>
+            <div style={{ fontSize: 10, color: "#fff", textAlign: "center", fontWeight: 600, lineHeight: 1.4, padding: "0 8px" }}>{(d.hook || d.title || "").slice(0, 80)}</div>
+            <div style={{ position: "absolute", right: 8, bottom: 60, display: "flex", flexDirection: "column", gap: 8 }}>
+              {["❤", "💬", "↗", "🔖"].map((ic, i) => <div key={i} style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff" }}>{ic}</div>)}
+            </div>
+          </div>
+          <div style={{ background: "#000", padding: "6px 10px", color: "#fff" }}>
+            <div style={{ fontSize: 9, fontWeight: 600, marginBottom: 2 }}>@{d.title?.slice(0, 18) || "cliente"}</div>
+            <div style={{ fontSize: 8, opacity: 0.7, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{(d.caption || d.title || "").slice(0, 40)}</div>
+            {d.music && <div style={{ fontSize: 8, opacity: 0.8, marginTop: 3, display: "flex", alignItems: "center", gap: 4 }}>♪ {d.music.slice(0, 24)}</div>}
+          </div>
+        </>
+      ));
+    }
+
+    if (d.type === "post") {
+      return previewFrame(null, (
+        <>
+          <div style={{ background: "#fafafa", padding: "6px 8px", display: "flex", alignItems: "center", gap: 6, borderBottom: "0.5px solid #eee" }}>
+            <div style={{ width: 18, height: 18, borderRadius: "50%", background: "#0C447C" }} />
+            <div style={{ fontSize: 9, color: "#111", fontWeight: 600 }}>Cliente</div>
+          </div>
+          <div style={{ flex: 1, background: "#E6F1FB", display: "flex", alignItems: "center", justifyContent: "center", padding: 10 }}>
+            <div style={{ background: "#fff", width: "100%", padding: 12, borderRadius: 6, textAlign: "center" }}>
+              <div style={{ fontSize: 8, color: "#0C447C", fontWeight: 800, marginBottom: 8, letterSpacing: 1 }}>POST</div>
+              <div style={{ fontSize: 11, color: "#111", fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>{(d.title || "").slice(0, 40)}</div>
+              <div style={{ fontSize: 8, color: "#555", lineHeight: 1.5 }}>{(d.description || "").slice(0, 80)}</div>
+            </div>
+          </div>
+          <div style={{ background: "#fafafa", padding: "5px 8px" }}>
+            <div style={{ fontSize: 8, color: "#666", lineHeight: 1.4 }}>{(d.caption || "").slice(0, 50)}</div>
+          </div>
+        </>
+      ));
+    }
+
+    if (d.type === "carousel" || d.type === "carrossel") {
+      return (
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, padding: "30px 0", flexWrap: "wrap" }}>
+          {[1, 2, 3, 4, 5].map((n, i) => (
+            <div key={n} style={{ width: 60, height: 80, borderRadius: 8, background: i === 0 ? "#27500A" : "#EAF3DE", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 3, border: `1.5px solid ${i === 0 ? "#16A34A" : "#C0DD97"}`, color: i === 0 ? "#fff" : "#27500A" }}>
+              <div style={{ fontSize: 10, fontWeight: 800 }}>{n}/5</div>
+              <div style={{ fontSize: 7, textAlign: "center", padding: "0 4px" }}>{i === 0 ? "capa" : `slide ${n}`}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (d.type === "story") {
+      return previewFrame(null, (
+        <>
+          <div style={{ flex: 1, background: "#FAEEDA", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 16, gap: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#633806", textAlign: "center", lineHeight: 1.4 }}>{(d.title || "").slice(0, 50)}</div>
+            <div style={{ width: "80%", background: "#fff", borderRadius: 6, padding: "6px 10px", fontSize: 9, color: "#633806", border: "0.5px solid rgba(0,0,0,0.1)" }}>Toque para responder</div>
+          </div>
+          <div style={{ height: 24, background: "#000" }} />
+        </>
+      ));
+    }
+
+    return <div style={{ padding: 40, textAlign: "center", color: T.textSub, fontSize: 13 }}>Prévia não disponível</div>;
+  }
+
+  function renderTabContent() {
+    const textAreaStyle = { width: "100%", minHeight: 140, padding: "10px 14px", borderRadius: 10, border: `1px solid ${T.border}`, background: T.bgInput, fontSize: 13, fontFamily: T.font, lineHeight: 1.7, color: T.text, resize: "vertical", outline: "none", boxSizing: "border-box" };
+    const labelStyle = { fontSize: 10, fontWeight: 700, color: T.textMuted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8, display: "block" };
+
+    if (activeTab === 0) return renderPreview();
+
+    if (activeTab === 1) {
+      return (
+        <div style={{ padding: "4px 0" }}>
+          <label style={labelStyle}>Roteiro / Descrição</label>
+          <textarea style={textAreaStyle} value={d.description || ""} onChange={e => onUpdate(sel, { description: e.target.value })} placeholder="Roteiro detalhado: hook, desenvolvimento, CTA..." />
+        </div>
+      );
+    }
+
+    if (activeTab === 2) {
+      return (
+        <div style={{ padding: "4px 0" }}>
+          <label style={labelStyle}>Legenda</label>
+          <textarea style={textAreaStyle} value={d.caption || ""} onChange={e => onUpdate(sel, { caption: e.target.value })} placeholder="Legenda para o post..." />
+          <label style={{ ...labelStyle, marginTop: 16 }}>Hashtags</label>
+          <input style={{ ...textAreaStyle, minHeight: "auto", height: 40 }} value={d.hashtags || ""} onChange={e => onUpdate(sel, { hashtags: e.target.value })} placeholder="#marketing #digital" />
+        </div>
+      );
+    }
+
+    if (isTrend && activeTab === 3) {
+      return (
+        <div style={{ padding: "4px 0" }}>
+          <label style={labelStyle}>Hook (primeiros 3s)</label>
+          <div style={{ padding: "12px 14px", background: "rgba(0,0,0,0.04)", borderRadius: 10, fontSize: 14, fontWeight: 700, color: T.text, marginBottom: 16 }}>{d.hook || "—"}</div>
+          <label style={labelStyle}>Música / Áudio viral</label>
+          <div style={{ padding: "10px 14px", background: "rgba(22,163,74,0.08)", borderRadius: 10, fontSize: 13, color: T.accentGreen, fontWeight: 600, marginBottom: 16 }}>♪ {d.music || "Não especificado"}</div>
+          <label style={labelStyle}>Por que viralizou</label>
+          <div style={{ fontSize: 13, color: T.textSub, lineHeight: 1.7 }}>{d.why_viral}</div>
+        </div>
+      );
+    }
+
+    if (isTrend && activeTab === 4) {
+      return (
+        <div style={{ padding: "4px 0" }}>
+          <label style={labelStyle}>Dicas de gravação e edição</label>
+          <textarea style={textAreaStyle} value={d.design_brief || ""} onChange={e => onUpdate(sel, { design_brief: e.target.value })} />
+          {d.source_url && <div style={{ marginTop: 12, fontSize: 11, color: T.textMuted }}>Fonte: <a href={d.source_url} target="_blank" rel="noreferrer" style={{ color: T.accentGreen }}>{d.source_url.slice(0, 50)}...</a></div>}
+        </div>
+      );
+    }
+
+    if (!isTrend && activeTab === 3) {
+      return (
+        <div style={{ padding: "4px 0" }}>
+          <label style={labelStyle}>Briefing de Design</label>
+          <textarea style={textAreaStyle} value={d.design_brief || ""} onChange={e => onUpdate(sel, { design_brief: e.target.value })} placeholder="Cores, tipografia, layout, estilo visual..." />
+        </div>
+      );
+    }
+
+    const noteTab = isTrend ? 5 : 4;
+    if (activeTab === noteTab) {
+      return (
+        <div style={{ padding: "4px 0" }}>
+          <label style={labelStyle}>Sugestão ou observação</label>
+          <textarea style={{ ...textAreaStyle, minHeight: 120 }} value={d.note || ""} onChange={e => onUpdate(sel, { note: e.target.value })} placeholder="Ex: mudar foco para e-commerce, ajustar o hook, trocar horário..." />
+          <div style={{ fontSize: 11, color: T.textMuted, marginTop: 8 }}>Esta nota será usada pela IA se você clicar em "Regerar".</div>
+        </div>
+      );
+    }
+
+    return null;
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(15,15,15,0.4)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.2s ease", padding: 20 }}>
+      <div style={{ background: "rgba(255,255,255,0.97)", backdropFilter: "blur(30px)", borderRadius: 20, width: "100%", maxWidth: 980, maxHeight: "92vh", display: "flex", flexDirection: "column", boxShadow: "0 32px 80px rgba(0,0,0,0.2)", border: `1px solid ${T.border}`, animation: "slideUp 0.3s cubic-bezier(0.4,0,0.2,1)", overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ padding: "18px 24px", borderBottom: `1px solid ${T.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, letterSpacing: "-0.02em", color: T.text }}>{origin === "trends" ? "Tendências encontradas" : "Revisar calendário gerado"}</h2>
+            <p style={{ margin: "3px 0 0", fontSize: 12, color: T.textSub }}>{items.length} {items.length === 1 ? "item" : "itens"} para revisar</p>
+          </div>
+          <button onClick={onClose} style={{ background: "rgba(0,0,0,0.05)", border: "none", width: 32, height: 32, borderRadius: "50%", cursor: "pointer", fontSize: 16, color: T.textSub }}>×</button>
+        </div>
+
+        {/* Cards scrollable row */}
+        <div style={{ padding: "14px 24px", borderBottom: `1px solid ${T.border}`, overflowX: "auto", whiteSpace: "nowrap", background: "rgba(0,0,0,0.02)" }}>
+          <div style={{ display: "inline-flex", gap: 10 }}>
+            {items.map((it, idx) => {
+              const c = typeColors[it.type] || typeColors.post;
+              const icon = typeIcons[it.type] || "◻";
+              return (
+                <div key={it._id || idx} onClick={() => { setSelIdx(idx); setActiveTab(0); }} style={{ cursor: "pointer", minWidth: 180, borderRadius: 12, border: `2px solid ${idx === sel ? T.accentGreen : T.border}`, background: "#fff", overflow: "hidden", transition: "all 0.15s", position: "relative", flexShrink: 0 }}>
+                  <div style={{ height: 68, background: c.bg, display: "flex", alignItems: "center", justifyContent: "center", position: "relative", fontSize: 24, color: c.txt }}>
+                    {icon}
+                    <div style={{ position: "absolute", top: 6, left: 6, fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 99, background: c.bg, color: c.txt, textTransform: "uppercase", border: `0.5px solid ${c.txt}30` }}>{it.type || "post"}</div>
+                    <button onClick={e => { e.stopPropagation(); onRemove(idx); }} style={{ position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: "50%", background: "rgba(255,255,255,0.9)", border: `0.5px solid ${T.border}`, cursor: "pointer", fontSize: 11, color: "#DC2626", display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+                  </div>
+                  <div style={{ padding: "8px 10px" }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: T.text, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{it.title}</div>
+                    <div style={{ fontSize: 10, color: T.textMuted }}>{it.day ? `Dia ${it.day}` : ""} {it.time ? `· ${it.time}` : ""}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ padding: "0 24px", borderBottom: `1px solid ${T.border}`, display: "flex", gap: 4, overflowX: "auto" }}>
+          {tabs.map(tab => (
+            <div key={tab.key} onClick={() => setActiveTab(tab.key)} style={{ padding: "12px 16px", fontSize: 12, fontWeight: activeTab === tab.key ? 700 : 500, color: activeTab === tab.key ? T.accentGreen : T.textSub, borderBottom: `2px solid ${activeTab === tab.key ? T.accentGreen : "transparent"}`, cursor: "pointer", whiteSpace: "nowrap" }}>
+              {tab.label}
+            </div>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>
+          {renderTabContent()}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "14px 24px", borderTop: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.02)" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 100, background: "transparent", border: `1px solid ${T.border}`, color: T.textSub, fontSize: 13, cursor: "pointer", fontFamily: T.font, fontWeight: 500 }}>Descartar tudo</button>
+            <button onClick={onRegenerate} style={{ padding: "9px 18px", borderRadius: 100, background: "transparent", border: `1px solid ${T.border}`, color: T.text, fontSize: 13, cursor: "pointer", fontFamily: T.font, fontWeight: 500 }}>↺ Regerar com notas</button>
+          </div>
+          <button onClick={onApprove} style={{ padding: "11px 24px", borderRadius: 100, background: T.accentGreen, color: "#fff", border: "none", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: T.font, boxShadow: "0 2px 12px rgba(22,163,74,0.3)" }}>✓ Aprovar e salvar {items.length} {items.length === 1 ? "item" : "itens"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export default function SocialHub({ session }) {
   const [view, setView] = useState(VIEWS.CLIENTS);
   const [clients, setClients] = useState([]);
@@ -294,6 +532,12 @@ export default function SocialHub({ session }) {
   const [apiKeySaved, setApiKeySaved] = useState(false);
   const [trendQ, setTrendQ] = useState("");
   const [trendR, setTrendR] = useState(null);
+  const [savedTrends, setSavedTrends] = useState([]);
+  const [reviewModal, setReviewModal] = useState(null);
+  const [reviewItems, setReviewItems] = useState([]);
+  const [reviewSelIdx, setReviewSelIdx] = useState(0);
+  const [reviewTab, setReviewTab] = useState(0);
+  const [reviewOrigin, setReviewOrigin] = useState("calendar");
 
   useEffect(() => {
     const style = document.createElement("style");
@@ -326,6 +570,14 @@ export default function SocialHub({ session }) {
     load();
   }, []);
 
+  useEffect(() => {
+    if (sel && ac) {
+      db.getTrendsByClient(ac.id).then(ts => setSavedTrends(ts)).catch(e => console.error(e));
+    } else {
+      setSavedTrends([]);
+    }
+  }, [sel]);
+
   function saveApiKey() {
     localStorage.setItem("sh_apikey", apiKey);
     localStorage.setItem("sh_geminikey", geminiKey);
@@ -355,6 +607,66 @@ export default function SocialHub({ session }) {
     return (data.text || "").replace(/```json|```/g, "").trim();
   }
 
+  // ===== REVIEW MODAL HANDLERS =====
+  function closeReview() {
+    setReviewModal(null);
+    setReviewItems([]);
+    setReviewSelIdx(0);
+    setReviewTab(0);
+  }
+
+  function removeReviewItem(idx) {
+    setReviewItems(prev => {
+      const next = prev.filter((_, i) => i !== idx);
+      if (reviewSelIdx >= next.length) setReviewSelIdx(Math.max(0, next.length - 1));
+      else if (idx <= reviewSelIdx && reviewSelIdx > 0) setReviewSelIdx(reviewSelIdx - 1);
+      return next;
+    });
+  }
+
+  function updateReviewItem(idx, updates) {
+    setReviewItems(prev => prev.map((it, i) => i === idx ? { ...it, ...updates } : it));
+  }
+
+  async function approveReview() {
+    if (!reviewItems || reviewItems.length === 0) { closeReview(); return; }
+    try {
+      if (reviewOrigin === "calendar") {
+        // Salvar como tarefas do cronograma
+        await db.deleteTasksByClientMonth(ac.id, calM, calY);
+        const toInsert = reviewItems.map(i => ({
+          client_id: ac.id,
+          day: i.day, month: calM, year: calY, time: i.time,
+          type: i.type, title: i.title,
+          description: i.description || "",
+          hashtags: i.hashtags || "",
+          status: "draft",
+          approval_note: (i.note ? "Nota: " + i.note : "") + (i.caption ? "\n\nLEGENDA:\n" + i.caption : "") + (i.design_brief ? "\n\nDESIGN:\n" + i.design_brief : "")
+        }));
+        const nt = await db.createTasks(toInsert);
+        setTasks(prev => [...prev.filter(t => !(t.client_id === ac.id && t.month === calM && t.year === calY)), ...nt]);
+        setAiR({ ok: true, n: nt.length, msg: `${nt.length} itens salvos no calendário!` });
+      }
+      // Tendências ja foram salvas no resTrends, não precisa salvar novamente
+    } catch(e) {
+      alert("Erro ao salvar: " + e.message);
+      return;
+    }
+    closeReview();
+  }
+
+  async function regenerateReview() {
+    if (!confirm("Isso vai descartar os itens atuais e gerar uma nova versão com as notas como contexto. Continuar?")) return;
+    const notes = reviewItems.filter(i => i.note).map(i => `Item "${i.title}": ${i.note}`).join("\n");
+    closeReview();
+    if (reviewOrigin === "calendar") {
+      // TODO: incluir notas no prompt da próxima geração
+      await genCal();
+    } else {
+      await resTrends();
+    }
+  }
+
   const ac = clients.find(c => c.id === sel);
   const dim = new Date(calY, calM + 1, 0).getDate();
   const cTasks = tasks.filter(t => t.client_id === sel);
@@ -374,43 +686,247 @@ export default function SocialHub({ session }) {
   async function updTask(id, u) { try { const t = await db.updateTask(id, u); setTasks(tasks.map(x => x.id === id ? t : x)); } catch(e) { alert(e.message); } }
   async function delTask(id) { try { await db.deleteTask(id); setTasks(tasks.filter(t => t.id !== id)); setTaskModal(null); setETask(null); } catch(e) { alert(e.message); } }
 
+  // Carregar tendências salvas de um cliente
+  async function loadTrendsForClient(clientId) {
+    if (!clientId) return [];
+    try {
+      const ts = await db.getTrendsByClient(clientId);
+      setSavedTrends(ts);
+      return ts;
+    } catch(e) { console.error(e); return []; }
+  }
+
+  // Verificar se as tendências salvas ainda são virais
+  async function validateSavedTrends(trends, clientIndustry) {
+    if (!trends || trends.length === 0) return { valid: [], invalid: [] };
+    const trendNames = trends.map(t => t.name).join(" | ");
+    const prompt = `Você é um analista de tendências de social media. Hoje é ${new Date().toLocaleDateString("pt-BR")}.
+Analise as tendências abaixo e diga quais AINDA estão virais/em alta AGORA no nicho "${clientIndustry}" e quais já passaram:
+
+Tendências salvas: ${trendNames}
+
+Use a busca para verificar cada uma nas fontes:
+- TikTok Creative Center (creativecenter.tiktok.com)
+- Later.com, Hootsuite e Sprout Social (publicam tendências semanais)
+- Google Trends (trends.google.com)
+- YouTube Trending
+
+Retorne APENAS JSON neste formato:
+{"results":[{"name":"nome exato da tendência","still_valid":true,"reason":"razão curta"}]}`;
+
+    try {
+      const text = await callAI(prompt, true);
+      const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text);
+      const valid = [], invalid = [];
+      trends.forEach(t => {
+        const r = parsed.results?.find(x => x.name === t.name || x.name.toLowerCase().includes(t.name.toLowerCase().slice(0,20)));
+        if (r && r.still_valid === false) invalid.push(t);
+        else valid.push(t);
+      });
+      return { valid, invalid };
+    } catch(e) {
+      console.error("validation failed:", e);
+      return { valid: trends, invalid: [] };
+    }
+  }
+
   async function genCal() {
     if (!ac || !checkKey()) return;
+
+    // 1. Carregar tendências salvas
+    const trends = await loadTrendsForClient(ac.id);
+
+    // 2. Se não tem tendências, bloquear
+    if (!trends || trends.length === 0) {
+      setAiR({ ok: false, needsTrends: true, e: "Você ainda não pesquisou tendências para este cliente. Pesquise tendências primeiro para que o calendário seja baseado no que está viral agora." });
+      return;
+    }
+
     setAiL(true); setAiR(null);
-    const p = `Você é um social media manager expert. Gere cronograma completo para ${MONTHS[calM]} ${calY} (${dim} dias).
-Cliente: ${ac.name} | Segmento: ${ac.industry} | Persona: ${ac.persona} | Tom: ${ac.tone}
-Contrato: ${ac.posts_per_month} posts, ${ac.reels_per_month} reels, ${ac.stories_per_day} stories/dia
-Tipos: ${cTypes.map(t => t.slug).join("|")}
-Regras: distribuir uniformemente, horários 7h/12h/18h/21h, REELs com roteiro+edição, POSTs com headlines+CTA, stories em sequência.
-RESPONDA APENAS JSON: {"items":[{"day":1,"time":"12:00","type":"post","title":"titulo","description":"desc detalhada","hashtags":"#tags"}]}`;
+
+    let trendsToUse = trends;
+    let regenerated = false;
+
+    // 3. Validar tendências
     try {
-      const text = await callAI(p);
+      setAiR({ ok: true, loading: true, msg: "Verificando se as tendências ainda estão em alta..." });
+      const { valid, invalid } = await validateSavedTrends(trends, ac.industry);
+
+      if (invalid.length > 0) {
+        // Deletar tendências inválidas
+        await db.markTrendsInvalid(invalid.map(t => t.id));
+        await db.deleteInvalidTrends(ac.id);
+      }
+
+      if (valid.length === 0) {
+        // Todas passaram — gerar novas automaticamente
+        setAiR({ ok: true, loading: true, msg: "Suas tendências já passaram. Buscando tendências atualizadas..." });
+        const newTrends = await fetchTrends(ac.industry, ac);
+        if (newTrends && newTrends.length > 0) {
+          const saved = await db.createTrends(newTrends.map(t => ({
+            client_id: ac.id,
+            name: t.name, platform: t.platform, why_viral: t.why_viral,
+            script: t.script, hook: t.hook, caption: t.caption || "",
+            editing_tips: t.editing_tips, hashtags: t.hashtags,
+            music: t.music || "", best_time: t.best_time,
+            estimated_reach: t.estimated_reach, format: t.format || "reel"
+          })));
+          trendsToUse = saved;
+          regenerated = true;
+        }
+      } else {
+        trendsToUse = valid;
+      }
+    } catch(e) {
+      console.error("validation error:", e);
+    }
+
+    // 4. Gerar calendário baseado nas tendências válidas
+    setAiR({ ok: true, loading: true, msg: regenerated ? "Tendências atualizadas! Gerando calendário..." : "Gerando calendário com base nas tendências atuais..." });
+
+    const trendsContext = trendsToUse.map(t => `- ${t.name} (${t.platform}): ${t.why_viral} | Hook: ${t.hook}`).join("\n");
+
+    const p = `Você é um social media manager expert. Gere cronograma completo para ${MONTHS[calM]} ${calY} (${dim} dias).
+
+CLIENTE: ${ac.name}
+Segmento: ${ac.industry}
+Persona: ${ac.persona}
+Tom de voz: ${ac.tone}
+Cores da marca: ${ac.colors}
+Contrato: ${ac.posts_per_month} posts, ${ac.reels_per_month} reels, ${ac.stories_per_day} stories/dia
+
+TENDÊNCIAS VIRAIS ATUAIS (use como base para os conteúdos):
+${trendsContext}
+
+Tipos disponíveis: ${cTypes.map(t => t.slug).join("|")}
+
+REGRAS:
+- Distribuir uniformemente pelo mês
+- Horários: 7h, 12h, 18h, 21h (melhores para Brasil)
+- REELs: roteiro completo com hook + desenvolvimento + CTA + dicas de edição
+- POSTs: headlines fortes, texto principal, CTA e briefing de design
+- CARROSSÉIS: roteiro slide-a-slide (5 slides) + briefing
+- STORIES: sequência e enquetes/interação
+- Aproveitar as tendências virais como inspiração para pelo menos 40% dos REELs
+- Para cada item incluir: roteiro, legenda, briefing de design (com cores), hashtags
+
+RESPONDA APENAS JSON:
+{"items":[{"day":1,"time":"12:00","type":"post","title":"","description":"roteiro completo","caption":"legenda pronta","design_brief":"briefing de design","hashtags":"#tags","inspired_by":"nome da tendência (se aplicável)"}]}`;
+
+    try {
+      const text = await callAI(p, false);
       const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text);
-      if (parsed.items) {
-        await db.deleteTasksByClientMonth(ac.id, calM, calY);
-        const nt = await db.createTasks(parsed.items.map(i => ({ client_id: ac.id, day: i.day, month: calM, year: calY, time: i.time, type: i.type, title: i.title, description: i.description, hashtags: i.hashtags || "", status: "draft", approval_note: "" })));
-        setTasks(prev => [...prev.filter(t => !(t.client_id === ac.id && t.month === calM && t.year === calY)), ...nt]);
-        setAiR({ ok: true, n: nt.length });
+      if (parsed.items && parsed.items.length > 0) {
+        // Preparar items para revisão (sem salvar ainda!)
+        setReviewItems(parsed.items.map((i, idx) => ({
+          ...i,
+          _id: `tmp_${idx}`,
+          client_id: ac.id,
+          month: calM,
+          year: calY,
+          status: "draft",
+          approval_note: "",
+          note: ""
+        })));
+        setReviewOrigin("calendar");
+        setReviewSelIdx(0);
+        setReviewTab(0);
+        setReviewModal(true);
+        setAiR({ ok: true, n: parsed.items.length, regenerated, msg: regenerated ? `Tendências atualizadas automaticamente! ${parsed.items.length} itens gerados para revisão.` : `${parsed.items.length} itens gerados para sua revisão.` });
       }
     } catch(e) { setAiR({ ok: false, e: e.message }); }
     setAiL(false);
+  }
+
+  // Pesquisa tendências (extraído para função separada — reutilizável)
+  async function fetchTrends(niche, client) {
+    const prompt = `Você é um especialista sênior em marketing viral para Instagram e TikTok brasileiro.
+Hoje é ${new Date().toLocaleDateString("pt-BR")}. Pesquise AGORA na web as tendências virais REAIS no nicho: "${niche}".
+${client ? `Cliente: ${client.name} | Persona: ${client.persona}` : ""}
+
+FONTES OBRIGATÓRIAS para buscar (use web_search para TODAS):
+1. TikTok Creative Center (creativecenter.tiktok.com) — trending sounds, hashtags, creators
+2. Later.com/blog e Hootsuite.com/blog — relatórios semanais de tendências
+3. Google Trends (trends.google.com.br) — termos em alta no Brasil
+4. Sprout Social e Metricool — análises de engajamento
+5. YouTube Trending Brasil — formatos virais
+
+Execute pelo menos 4 buscas diferentes como:
+- "tendências ${niche} instagram ${new Date().toLocaleDateString("pt-BR",{month:"long",year:"numeric"})}"
+- "tiktok trending sounds ${niche} brasil"
+- "reels virais ${niche} hook"
+- "formato viral ${niche} tiktok"
+
+Retorne 5 tendências REAIS e ATUAIS com dados que você encontrou. JSON apenas:
+{"trends":[{
+  "name":"nome exato da tendência",
+  "platform":"Instagram|TikTok|Ambos",
+  "format":"reel|post|carrossel|story",
+  "why_viral":"por que está viralizando com dados reais de engajamento",
+  "script":"roteiro completo passo a passo com timings",
+  "hook":"gancho dos primeiros 3 segundos",
+  "caption":"legenda pronta para usar",
+  "editing_tips":"dicas detalhadas de gravação e edição",
+  "hashtags":"#hashtags relevantes",
+  "music":"música trending ou áudio do TikTok (se aplicável)",
+  "best_time":"melhor horário para postar",
+  "estimated_reach":"alto|médio",
+  "source_url":"link de onde a informação foi encontrada (se possível)"
+}]}`;
+
+    const text = await callAI(prompt, true);
+    const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text);
+    return parsed.trends || [];
   }
 
   async function resTrends() {
     if (!checkKey()) return;
     setAiL(true); setTrendR(null);
     const q = trendQ || ac?.industry || "marketing digital";
-    const p = `Você é um especialista em marketing viral e social media. 
-Pesquise na internet O QUE ESTÁ VIRALIZANDO AGORA em ${new Date().toLocaleDateString("pt-BR", {month:"long",year:"numeric"})} no nicho: "${q}". ${ac ? `Cliente: ${ac.name} | Segmento: ${ac.industry}` : ""}
+    try {
+      const trends = await fetchTrends(q, ac);
+      if (ac && trends.length > 0) {
+        // Salvar no banco
+        await db.deleteTrendsByClient(ac.id);
+        const saved = await db.createTrends(trends.map(t => ({
+          client_id: ac.id,
+          name: t.name, platform: t.platform, why_viral: t.why_viral,
+          script: t.script, hook: t.hook, caption: t.caption || "",
+          editing_tips: t.editing_tips, hashtags: t.hashtags,
+          music: t.music || "", best_time: t.best_time,
+          estimated_reach: t.estimated_reach, format: t.format || "reel",
+          source_url: t.source_url || ""
+        })));
+        setSavedTrends(saved);
 
-IMPORTANTE: Use a ferramenta de busca para encontrar tendências REAIS e ATUAIS do Instagram, TikTok e Reels brasileiros.
-Busque por: tendências ${q} instagram 2026, reels virais ${q}, conteúdo viral ${q} brasil.
-
-Após pesquisar, retorne EXATAMENTE este JSON com 5 tendências reais encontradas:
-{"trends":[{"name":"nome da tendência","platform":"Instagram|TikTok|Ambos","why_viral":"por que está viralizando com dados reais","script":"roteiro completo passo a passo","hook":"gancho dos primeiros 3 segundos","editing_tips":"dicas de gravação e edição","hashtags":"#hashtags relevantes","best_time":"melhor horário para postar","estimated_reach":"alto|médio"}]}
-
-Responda APENAS com o JSON, sem texto antes ou depois.`;
-    try { const text = await callAI(p, true); setTrendR(JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] || text)); } catch(e) { setTrendR({ error: e.message }); }
+        // Abrir modal de revisão
+        setReviewItems(saved.map((t, idx) => ({
+          _id: t.id || `tmp_${idx}`,
+          _isTrend: true,
+          title: t.name,
+          day: 1,
+          time: "18:00",
+          type: t.format || "reel",
+          description: t.script,
+          caption: t.caption,
+          design_brief: t.editing_tips,
+          hashtags: t.hashtags,
+          platform: t.platform,
+          hook: t.hook,
+          why_viral: t.why_viral,
+          music: t.music,
+          best_time: t.best_time,
+          estimated_reach: t.estimated_reach,
+          source_url: t.source_url,
+          note: ""
+        })));
+        setReviewOrigin("trends");
+        setReviewSelIdx(0);
+        setReviewTab(0);
+        setReviewModal(true);
+      }
+      setTrendR({ trends });
+    } catch(e) { setTrendR({ error: e.message }); }
     setAiL(false);
   }
 
@@ -704,9 +1220,29 @@ Responda APENAS com o JSON, sem texto antes ou depois.`;
           })}
         </div>
 
-        {aiR && (
+        {aiR && aiR.needsTrends && (
+          <Card style={{ padding: "20px 24px", marginBottom: 16, borderLeft: "3px solid #F59E0B", background: "rgba(245,158,11,0.05)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
+              <div style={{ fontSize: 22, marginTop: 2 }}>⚠️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: T.text, marginBottom: 6 }}>Você ainda não pesquisou tendências</div>
+                <div style={{ fontSize: 13, color: T.textSub, lineHeight: 1.6, marginBottom: 12 }}>Para gerar um calendário de alta performance, preciso primeiro saber o que está viralizando no nicho do seu cliente. Pesquise as tendências atuais e eu uso elas como base para criar conteúdos com maior chance de viralizar.</div>
+                <Btn size="sm" variant="primary" onClick={() => { setAiR(null); setView(VIEWS.TRENDS); }}>→ Ir para Tendências</Btn>
+              </div>
+            </div>
+          </Card>
+        )}
+        {aiR && !aiR.needsTrends && aiR.loading && (
+          <Card style={{ padding: "14px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: T.accentGreen, animation: `pulse 1.2s ease-in-out ${i*0.2}s infinite` }} />)}
+            </div>
+            <span style={{ fontSize: 13, color: T.text, fontWeight: 500 }}>{aiR.msg}</span>
+          </Card>
+        )}
+        {aiR && !aiR.needsTrends && !aiR.loading && (
           <div style={{ padding: "12px 16px", borderRadius: T.radiusSm, marginBottom: 16, fontSize: 13, fontWeight: 500, background: aiR.ok ? T.accentGreenLight : "rgba(239,68,68,0.08)", color: aiR.ok ? T.accentGreen : "#DC2626", border: `1px solid ${aiR.ok ? "rgba(22,163,74,0.2)" : "rgba(239,68,68,0.2)"}` }}>
-            {aiR.ok ? `✓ ${aiR.n} itens criados para ${MONTHS[calM]}!` : `✕ ${aiR.e}`}
+            {aiR.ok ? `✓ ${aiR.msg || `${aiR.n} itens criados`}` : `✕ ${aiR.e}`}
           </div>
         )}
 
@@ -830,42 +1366,28 @@ Responda APENAS com o JSON, sem texto antes ou depois.`;
       </div>
     )}
     {trendR?.error && <Card style={{ padding: 20 }}><span style={{ color: "#DC2626", fontSize: 13 }}>✕ {trendR.error}</span></Card>}
-    {trendR?.trends?.map((tr, i) => (
-      <Card key={i} style={{ marginBottom: 14, overflow: "hidden", animation: `slideIn 0.3s ease ${i * 0.08}s both` }}>
-        <div style={{ padding: "18px 22px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 16, color: T.text, letterSpacing: "-0.02em", marginBottom: 4 }}>{tr.name}</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <Badge>{tr.platform}</Badge>
-              <Badge>{tr.best_time}</Badge>
-              <Badge color={T.accentGreen} bg={T.accentGreenLight}>Alcance {tr.estimated_reach}</Badge>
-            </div>
-          </div>
-          <Btn size="sm" onClick={async () => { if (sel) { await addTask({ title: tr.name, type: "reel", day: 1, time: "12:00", description: `GANCHO: ${tr.hook}\n\nROTEIRO:\n${tr.script}\n\nEDIÇÃO:\n${tr.editing_tips}\n\nHASHTAGS: ${tr.hashtags}`, hashtags: tr.hashtags || "", status: "draft", approval_note: "" }); alert("✓ Adicionado ao calendário!"); } else alert("Selecione um cliente."); }}>+ Adicionar</Btn>
+
+    {savedTrends.length > 0 && !aiL && (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: T.text }}>Tendências salvas para {ac?.name || "este cliente"}</div>
+          <Btn size="sm" variant="ghost" onClick={() => { setReviewItems(savedTrends.map((t,idx) => ({ _id: t.id, _isTrend: true, title: t.name, day: 1, time: "18:00", type: t.format || "reel", description: t.script, caption: t.caption, design_brief: t.editing_tips, hashtags: t.hashtags, platform: t.platform, hook: t.hook, why_viral: t.why_viral, music: t.music, best_time: t.best_time, estimated_reach: t.estimated_reach, source_url: t.source_url, note: "" }))); setReviewOrigin("trends"); setReviewSelIdx(0); setReviewTab(0); setReviewModal(true); }}>Ver detalhes</Btn>
         </div>
-        <div style={{ padding: "18px 22px", display: "grid", gap: 16 }}>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Por que viralizou</div>
-            <div style={{ fontSize: 13, color: T.textSub, lineHeight: 1.7 }}>{tr.why_viral}</div>
-          </div>
-          <div style={{ padding: "12px 16px", borderRadius: T.radiusSm, background: "rgba(0,0,0,0.04)", border: `1px solid ${T.border}` }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Hook (primeiros 3s)</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: T.text, lineHeight: 1.5 }}>{tr.hook}</div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Roteiro</div>
-              <div style={{ fontSize: 13, color: T.textSub, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{tr.script}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: T.textMuted, letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 6 }}>Edição e gravação</div>
-              <div style={{ fontSize: 13, color: T.textSub, lineHeight: 1.7 }}>{tr.editing_tips}</div>
-              {tr.hashtags && <div style={{ fontSize: 12, color: T.accentGreen, marginTop: 10, fontWeight: 500 }}>{tr.hashtags}</div>}
-            </div>
-          </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 10, marginBottom: 20 }}>
+          {savedTrends.map((t, i) => (
+            <Card key={t.id} style={{ padding: 16, cursor: "pointer" }} onClick={() => { setReviewItems(savedTrends.map((tt,idx) => ({ _id: tt.id, _isTrend: true, title: tt.name, day: 1, time: "18:00", type: tt.format || "reel", description: tt.script, caption: tt.caption, design_brief: tt.editing_tips, hashtags: tt.hashtags, platform: tt.platform, hook: tt.hook, why_viral: tt.why_viral, music: tt.music, best_time: tt.best_time, estimated_reach: tt.estimated_reach, source_url: tt.source_url, note: "" }))); setReviewOrigin("trends"); setReviewSelIdx(i); setReviewTab(0); setReviewModal(true); }}>
+              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                <Badge>{t.platform}</Badge>
+                <Badge color={T.accentGreen} bg={T.accentGreenLight}>Alcance {t.estimated_reach}</Badge>
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: T.text, marginBottom: 6, letterSpacing: "-0.01em" }}>{t.name}</div>
+              <div style={{ fontSize: 11, color: T.textSub, lineHeight: 1.5, marginBottom: 8 }}>{(t.why_viral || "").slice(0, 90)}{(t.why_viral || "").length > 90 ? "..." : ""}</div>
+              {t.music && <div style={{ fontSize: 11, color: T.accentGreen, fontWeight: 600 }}>♪ {t.music.slice(0, 30)}</div>}
+            </Card>
+          ))}
         </div>
-      </Card>
-    ))}
+      </div>
+    )}
     {!trendR && !aiL && (
       <Card style={{ padding: 60, textAlign: "center" }}>
         <div style={{ fontSize: 36, marginBottom: 12 }}>✦</div>
@@ -880,6 +1402,22 @@ Responda APENAS com o JSON, sem texto antes ou depois.`;
       </div>
 
       {/* ── MODALS ── */}
+      {reviewModal && (
+        <ReviewModal
+          items={reviewItems}
+          selIdx={reviewSelIdx}
+          setSelIdx={setReviewSelIdx}
+          activeTab={reviewTab}
+          setActiveTab={setReviewTab}
+          onRemove={removeReviewItem}
+          onUpdate={updateReviewItem}
+          onApprove={approveReview}
+          onRegenerate={regenerateReview}
+          onClose={closeReview}
+          origin={reviewOrigin}
+          T={T}
+        />
+      )}
       {showNew && <TaskForm title="Novo item" task={nTask} setT={setNTask} tOpts={tOpts} sOpts={sOpts} dim={dim} calM={calM} calY={calY} onCancel={() => setShowNew(false)} onSave={async () => { if (nTask.title) { await addTask(nTask); setShowNew(false); } }} />}
       {taskModal && eTask && <TaskForm title="Editar item" task={eTask} setT={setETask} tOpts={tOpts} sOpts={sOpts} dim={dim} calM={calM} calY={calY} onCancel={() => { setTaskModal(null); setETask(null); }} onSave={async () => { await updTask(taskModal, eTask); setTaskModal(null); setETask(null); }} onDel={() => { if (confirm("Excluir?")) delTask(taskModal); }} />}
     </div>

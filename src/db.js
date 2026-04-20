@@ -102,6 +102,42 @@ export async function deleteContentType(id) {
   if (error) throw error
 }
 
+// ===== TRENDS =====
+export async function getTrendsByClient(clientId) {
+  const { data, error } = await supabase.from('trends').select('*').eq('client_id', clientId).eq('still_valid', true).order('created_at', { ascending: false })
+  if (error) throw error
+  return data || []
+}
+
+export async function createTrends(trendsArray) {
+  const { data: { user } } = await supabase.auth.getUser()
+  const rows = trendsArray.map(t => ({ ...t, user_id: user.id }))
+  const { data, error } = await supabase.from('trends').insert(rows).select()
+  if (error) throw error
+  return data || []
+}
+
+export async function deleteTrend(id) {
+  const { error } = await supabase.from('trends').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteTrendsByClient(clientId) {
+  const { error } = await supabase.from('trends').delete().eq('client_id', clientId)
+  if (error) throw error
+}
+
+export async function markTrendsInvalid(ids) {
+  if (!ids || !ids.length) return
+  const { error } = await supabase.from('trends').update({ still_valid: false }).in('id', ids)
+  if (error) throw error
+}
+
+export async function deleteInvalidTrends(clientId) {
+  const { error } = await supabase.from('trends').delete().eq('client_id', clientId).eq('still_valid', false)
+  if (error) throw error
+}
+
 // ===== AUTH =====
 export async function signOut() {
   await supabase.auth.signOut()
